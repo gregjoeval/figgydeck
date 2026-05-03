@@ -1,0 +1,45 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Generated outputs (never commit decks/images by default — they're per-user)
+out/
+output/
+extracted/
+*.apkg
+*.pptx
+
+# Source PDFs — don't commit copyrighted material
+tests/fixtures/*.pdf
+examples/*.pdf
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+/assets/

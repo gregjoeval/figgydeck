@@ -1,0 +1,61 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "figgydeck"
+version = "0.1.0"
+description = "Turn textbooks into study decks: extract figures, tables, and captions from chapter PDFs and package them as Anki decks."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "figgydeck contributors" }]
+keywords = ["anki", "flashcards", "pdf", "textbook", "study", "figures", "captions", "elsevier"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Text Processing",
+]
+dependencies = [
+    "pdfplumber>=0.10",
+    "Pillow>=9.0",
+    "genanki>=0.13",
+]
+
+[project.optional-dependencies]
+pptx = ["python-pptx>=0.6.21"]
+dev = [
+    "pytest>=7",
+    "pytest-cov>=4",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+figgydeck = "figgydeck.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/gregjoeval/figgydeck"
+Repository = "https://github.com/gregjoeval/figgydeck"
+Issues = "https://github.com/gregjoeval/figgydeck/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/figgydeck"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "B", "UP"]
+ignore = ["E501"]  # line-length is enforced by formatter
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v"
