@@ -29,6 +29,7 @@ extracted/
 *.pptx
 
 # Source PDFs — don't commit copyrighted material
+*.pdf
 tests/fixtures/*.pdf
 examples/*.pdf
 
