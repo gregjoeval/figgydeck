@@ -21,39 +21,49 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def manifest(tmp_path_factory):
+def manifest_with_tables(tmp_path_factory):
     from figgydeck.extract import extract_chapter
     out_dir = tmp_path_factory.mktemp("ch1")
-    return extract_chapter(FIXTURE, out_dir, verbose=False), out_dir
+    return extract_chapter(FIXTURE, out_dir, include_tables=True, verbose=False), out_dir
 
 
-def test_finds_all_figures_and_tables(manifest):
-    m, _ = manifest
+def test_finds_all_figures_and_tables(manifest_with_tables):
+    m, _ = manifest_with_tables
     figures = [e for e in m if e["type"] == "figure"]
     tables = [e for e in m if e["type"] == "table"]
     assert len(figures) == 53, f"expected 53 figures, got {len(figures)}"
     assert len(tables) == 2, f"expected 2 tables, got {len(tables)}"
 
 
-def test_every_figure_has_an_image(manifest):
-    m, _ = manifest
+def test_every_figure_has_an_image(manifest_with_tables):
+    m, _ = manifest_with_tables
     missing = [e["number"] for e in m if e["type"] == "figure" and not e["image_filename"]]
     assert not missing, f"figures without images: {missing}"
 
 
-def test_every_table_has_an_image(manifest):
-    m, _ = manifest
+def test_every_table_has_an_image(manifest_with_tables):
+    m, _ = manifest_with_tables
     missing = [e["number"] for e in m if e["type"] == "table" and not e["image_filename"]]
     assert not missing, f"tables without images: {missing}"
 
 
-def test_critical_swap_cases(manifest):
+def test_default_skips_tables(tmp_path):
+    """Without include_tables, tables should be excluded from the manifest entirely."""
+    from figgydeck.extract import extract_chapter
+    m = extract_chapter(FIXTURE, tmp_path, verbose=False)
+    assert not any(e["type"] == "table" for e in m), \
+        "default extraction must not include tables"
+    # Sanity check: figures still come through.
+    assert any(e["type"] == "figure" for e in m)
+
+
+def test_critical_swap_cases(manifest_with_tables):
     """The swap-prone figures whose stream order doesn't match figure order.
 
     These are the exact cases that defeat naive 'pdfimages -png in order'
     matching. The geometric matcher must get them right.
     """
-    m, _ = manifest
+    m, _ = manifest_with_tables
     by_num = {e["number"]: e for e in m if e["type"] == "figure"}
 
     # (figure number, expected image stream index)
@@ -77,9 +87,9 @@ def test_critical_swap_cases(manifest):
         assert actual == expected, f"Fig {num}: expected {expected}, got {actual}"
 
 
-def test_captions_are_clean(manifest):
+def test_captions_are_clean(manifest_with_tables):
     """Captions should not contain running headers, page numbers, or footnote leaks."""
-    m, _ = manifest
+    m, _ = manifest_with_tables
     for e in m:
         if e["type"] != "figure":
             continue
@@ -90,24 +100,29 @@ def test_captions_are_clean(manifest):
         assert "ﬂ" not in cap, f"Fig {e['number']} has unresolved ligature"
 
 
-def test_table_titles_present(manifest):
-    m, _ = manifest
+def test_table_titles_present(manifest_with_tables):
+    m, _ = manifest_with_tables
     for e in m:
         if e["type"] == "table":
             assert e["title"], f"Table {e['number']} has no title"
 
 
-def test_apkg_round_trip(manifest, tmp_path):
-    """Build an apkg from the manifest and verify it's a valid Anki package."""
+def test_apkg_round_trip(manifest_with_tables, tmp_path):
+    """Build an apkg from a figs-only manifest view and verify it's a valid Anki package.
+
+    Uses the figs-only view to exercise the new default behavior end-to-end:
+    manifest filtered to figures -> apkg with figures only.
+    """
     import sqlite3
     import zipfile
 
     from figgydeck.anki import build_apkg
 
-    m, out_dir = manifest
+    m, out_dir = manifest_with_tables
+    figs_only = [e for e in m if e["type"] == "figure"]
     apkg_path = tmp_path / "ch1.apkg"
     build_apkg(
-        m, out_dir / "images",
+        figs_only, out_dir / "images",
         "Test Book", "Test Chapter",
         apkg_path, verbose=False,
     )
@@ -126,5 +141,5 @@ def test_apkg_round_trip(manifest, tmp_path):
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes")
         n_notes = c.fetchone()[0]
-        # 53 figures + 2 tables = 55
-        assert n_notes == 55, f"expected 55 notes, got {n_notes}"
+        # 53 figures, no tables (figs-only view exercises the new default)
+        assert n_notes == 53, f"expected 53 notes, got {n_notes}"

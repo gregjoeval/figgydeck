@@ -39,7 +39,7 @@ sudo apt install poppler-utils
 ## Usage
 
 ```bash
-# One command, chapter PDF → Anki deck
+# One command, chapter PDF → Anki deck (figures only by default)
 figgydeck chapter1.pdf \
     --book "The Laboratory Rat (3rd ed., 2020)" \
     --chapter "Ch. 1: Historical Foundations" \
@@ -48,14 +48,28 @@ figgydeck chapter1.pdf \
 # Outputs:
 #   out/LaboratoryRat_3e_Ch01_HistoricalFoundations.apkg  ← import into Anki
 #   out/manifest.json                                      ← inspect what was extracted
-#   out/images/                                            ← extracted figures + cropped tables
+#   out/images/                                            ← extracted figures
 ```
 
-To also produce a slide deck:
+Also include table cards (extra `pdftoppm` rasterization per table):
 
 ```bash
-figgydeck chapter1.pdf --book "..." --chapter "..." --output ./out --pptx
+figgydeck chapter1.pdf --book "..." --chapter "..." --tables
 ```
+
+Pick your output format(s) with `--out` (repeatable, or comma-separated):
+
+```bash
+figgydeck chapter1.pdf --book "..." --chapter "..." --out pptx           # only .pptx
+figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg,pptx      # both
+figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg --out pptx  # same
+```
+
+### Breaking changes in 0.2.0
+
+- `--pptx` and `--no-anki` removed — use `--out apkg`, `--out pptx`, or `--out apkg,pptx`.
+- Table cards are now opt-in via `--tables` (previously included by default).
+- The library function `extract_chapter()` defaults `include_tables=False`. Programmatic callers that want tables must pass `include_tables=True`.
 
 ## How it works
 

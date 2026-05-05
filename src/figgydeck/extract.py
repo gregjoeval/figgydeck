@@ -36,13 +36,17 @@ def extract_chapter(
     pdf_path: str | Path,
     output_dir: str | Path,
     *,
+    include_tables: bool = False,
     verbose: bool = True,
 ) -> list[dict]:
-    """Extract figures, tables, and captions from a chapter PDF.
+    """Extract figures (and optionally tables) and captions from a chapter PDF.
 
     Args:
         pdf_path: Source chapter PDF.
         output_dir: Where to write `manifest.json` and `images/` folder.
+        include_tables: When True, detect and render tables and include them in
+            the manifest. When False (default — changed in 0.2.0; previously
+            tables were always included), tables are skipped entirely.
         verbose: Print progress.
 
     Returns:
@@ -71,6 +75,8 @@ def extract_chapter(
             streams_on_page = page_to_streams.get(page_num, [])
 
             for entry in entries:
+                if entry.type == "table" and not include_tables:
+                    continue
                 # Determine the image file for this entry (if any)
                 if entry.type == "figure" and entry.matched_image_idx_on_page is not None:
                     if entry.matched_image_idx_on_page < len(streams_on_page):
@@ -117,6 +123,9 @@ def extract_chapter(
     n_fig = sum(1 for e in manifest if e.type == "figure")
     n_tab = sum(1 for e in manifest if e.type == "table")
     log(f"  wrote {out_path}")
-    log(f"  found {n_fig} figures, {n_tab} tables")
+    if include_tables:
+        log(f"  found {n_fig} figures, {n_tab} tables")
+    else:
+        log(f"  found {n_fig} figures (tables skipped)")
 
     return manifest_dicts

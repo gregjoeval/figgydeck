@@ -83,6 +83,8 @@ chapter.pdf
    │       └─► match labels to images (geometric, column-aware)
    │
    ├─► pdftoppm + PIL crop tables  ─► images/table-X_Y.png
+   │      (only when --tables / include_tables=True; skipped by default
+   │       since 0.2.0 — figures-only is the common case)
    │
    ├─► clean_caption()  (ligatures, headers, hyphenation)
    │

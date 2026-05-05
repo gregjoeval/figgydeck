@@ -22,7 +22,7 @@ for pdf_path in sorted(CHAPTERS_DIR.glob("ch*.pdf")):
 
     # 1. Extract figures, tables, captions
     extracted_dir = OUTPUT_DIR / chapter_num
-    manifest = extract_chapter(pdf_path, extracted_dir)
+    manifest = extract_chapter(pdf_path, extracted_dir, include_tables=True)
 
     # 2. Build .apkg
     apkg_path = OUTPUT_DIR / f"{pdf_path.stem}.apkg"
