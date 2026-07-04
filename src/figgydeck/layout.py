@@ -125,7 +125,11 @@ def group_chars_into_lines(chars):
 
 # ---------- Label parsing ----------
 
-LABEL_RE = re.compile(r"^(FIGURE|TABLE)\s*([\d.]+[A-Za-z]?)(.*)$")
+# Case-insensitive on the keyword so both Elsevier-style uppercase "FIGURE 1.2"
+# and Wiley-style title-case "Figure 1.2" (and the number-glued "Figure2.2.5"
+# variant) match. The 9pt size gate in extract_page keeps this from catching
+# "Figure 3" mentions in body text, which sit at the larger caption/body size.
+LABEL_RE = re.compile(r"^(FIGURE|TABLE)\s*([\d.]+[A-Za-z]?)(.*)$", re.IGNORECASE)
 
 
 def parse_labels(raw_lines, page_width: float) -> list[Label]:
