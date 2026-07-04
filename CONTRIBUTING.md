@@ -63,11 +63,10 @@ sample PDF and we'll figure it out together.
 
 ## Testing with copyrighted PDFs
 
-The smoke test in `tests/test_chapter1.py` requires a chapter PDF from
-*The Laboratory Rat* (3rd ed.) at `tests/fixtures/laboratory_rat_ch1.pdf`.
-This file is not committed — it's copyrighted. The test gracefully skips
-if the file isn't present. Place your own copy there to run the smoke test
-locally.
+The smoke test in `tests/test_chapter1.py` requires a chapter PDF that you own
+at `tests/fixtures/sample_chapter.pdf`. This file is not committed — never commit
+copyrighted material. The test gracefully skips if the file isn't present. Place
+your own copy there to run the smoke test locally.
 
 ## Pull requests
 

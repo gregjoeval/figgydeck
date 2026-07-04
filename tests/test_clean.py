@@ -9,13 +9,18 @@ def test_decodes_ligatures():
 
 
 def test_strips_running_header():
-    text = "Beautiful caption text. BACKGROUND OF THE LABORATORY RAT trailing"
-    assert "BACKGROUND" not in clean_caption(text)
+    # A run of >= 3 consecutive all-caps words is treated as a header banner.
+    text = "Beautiful caption text. OVERVIEW OF THE SAMPLE CHAPTER trailing"
+    out = clean_caption(text)
+    assert "OVERVIEW" not in out
+    assert "Beautiful caption text." in out
+    assert "trailing" in out
 
 
-def test_strips_footnote_tail():
-    text = "Caption body. Names of Donaldson's collaborators are given in parentheses."
-    assert "Names of Donaldson" not in clean_caption(text)
+def test_preserves_punctuated_acronyms():
+    # Acronym lists are punctuated, so they must NOT be mistaken for a header.
+    text = "Gel showing DNA, RNA, and PCR products."
+    assert clean_caption(text) == "Gel showing DNA, RNA, and PCR products."
 
 
 def test_normalizes_en_dash():
@@ -34,7 +39,7 @@ def test_collapses_whitespace():
 
 
 def test_split_camel_basic():
-    assert split_camel("RatStrainsAndStocks") == "Rat Strains And Stocks"
+    assert split_camel("CellTypesAndMarkers") == "Cell Types And Markers"
 
 
 def test_split_camel_idempotent():

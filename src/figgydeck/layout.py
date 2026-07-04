@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-# ---------- Tunables (Elsevier laboratory-animal series defaults) ----------
+# ---------- Tunables (Elsevier-style layout defaults) ----------
 
 LABEL_SIZE = 9.0      # "FIGURE X.Y" / "TABLE X.Y"
 CAPTION_SIZE = 8.0    # caption body text
