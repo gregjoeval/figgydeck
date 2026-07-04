@@ -65,6 +65,26 @@ figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg,pptx      # both
 figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg --out pptx  # same
 ```
 
+### Multiple chapters
+
+Pass more than one chapter PDF in a single command. Give one `--chapter` per PDF
+(in order), or omit `--chapter` entirely to derive each title from its filename
+(`ch01.pdf` → "Chapter 1"):
+
+```bash
+# one artifact per chapter (like running figgydeck once per PDF)
+figgydeck ch01.pdf ch02.pdf ch03.pdf --book "..." --out pptx
+
+# --combine merges every chapter into ONE artifact per format
+figgydeck ch01.pdf ch02.pdf ch03.pdf --book "..." --combine --out apkg,pptx
+#   out/<Book>_Combined.pptx   ← one deck: title slide + all figures
+#   out/<Book>_Combined.apkg   ← one Anki package, one subdeck per chapter
+```
+
+With multiple PDFs, each chapter is extracted into its own `out/NN_<slug>/`
+subdir (so identical image names don't collide). Slide images keep their native
+aspect ratio and are centered — nothing is stretched or cropped.
+
 ### Breaking changes in 0.2.0
 
 - `--pptx` and `--no-anki` removed — use `--out apkg`, `--out pptx`, or `--out apkg,pptx`.

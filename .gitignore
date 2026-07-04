@@ -33,9 +33,10 @@ extracted/
 tests/fixtures/*.pdf
 examples/*.pdf
 
-# Editor / OS
+# Editor / OS / agent tooling
 .vscode/
 .idea/
+.serena/
 .DS_Store
 *.swp
 *.swo

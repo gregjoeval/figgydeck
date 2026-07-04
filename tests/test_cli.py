@@ -6,6 +6,7 @@ no PDF or external tooling is required.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -101,3 +102,95 @@ def test_missing_pdf_returns_nonzero(tmp_path):
         "--book", "B", "--chapter", "C", "--output", str(tmp_path),
     ])
     assert rc == 2
+
+
+# --- multi-PDF, --combine, and title resolution -----------------------------
+
+@pytest.fixture
+def two_pdfs(tmp_path):
+    a = tmp_path / "ch01.pdf"
+    a.touch()
+    b = tmp_path / "ch02.pdf"
+    b.touch()
+    return a, b
+
+
+@pytest.fixture
+def mocked_all(tmp_path):
+    """Patch extract + all four builders (single and combined). Yields a ns."""
+    with patch("figgydeck.extract.extract_chapter", return_value=[]) as ex, \
+         patch("figgydeck.anki.build_apkg") as apkg, \
+         patch("figgydeck.pptx.build_pptx") as pptx, \
+         patch("figgydeck.anki.build_combined_apkg") as capkg, \
+         patch("figgydeck.pptx.build_combined_pptx") as cpptx:
+        yield SimpleNamespace(ex=ex, apkg=apkg, pptx=pptx, capkg=capkg, cpptx=cpptx)
+
+
+def test_combine_writes_one_artifact_per_format(two_pdfs, tmp_path, mocked_all):
+    a, b = two_pdfs
+    rc = cli.main([
+        str(a), str(b), "--book", "Book", "--combine",
+        "--out", "apkg,pptx", "--output", str(tmp_path),
+    ])
+    assert rc == 0
+    mocked_all.capkg.assert_called_once()
+    mocked_all.cpptx.assert_called_once()
+    # single-chapter builders must not run in combine mode
+    mocked_all.apkg.assert_not_called()
+    mocked_all.pptx.assert_not_called()
+
+
+def test_multi_pdf_without_combine_writes_one_per_pdf(two_pdfs, tmp_path, mocked_all):
+    a, b = two_pdfs
+    rc = cli.main([
+        str(a), str(b), "--book", "Book", "--out", "pptx", "--output", str(tmp_path),
+    ])
+    assert rc == 0
+    assert mocked_all.pptx.call_count == 2
+    mocked_all.cpptx.assert_not_called()
+
+
+def test_titles_derived_from_filename(two_pdfs, tmp_path, mocked_all):
+    a, b = two_pdfs
+    rc = cli.main([
+        str(a), str(b), "--book", "Book", "--out", "pptx", "--output", str(tmp_path),
+    ])
+    assert rc == 0
+    # build_pptx(manifest, images_dir, book, chapter, output, ...)
+    titles = [call.args[3] for call in mocked_all.pptx.call_args_list]
+    assert titles == ["Chapter 1", "Chapter 2"]
+
+
+def test_explicit_chapters_are_paired_in_order(two_pdfs, tmp_path, mocked_all):
+    a, b = two_pdfs
+    rc = cli.main([
+        str(a), str(b), "--book", "Book",
+        "--chapter", "Intro", "--chapter", "Methods",
+        "--out", "pptx", "--output", str(tmp_path),
+    ])
+    assert rc == 0
+    titles = [call.args[3] for call in mocked_all.pptx.call_args_list]
+    assert titles == ["Intro", "Methods"]
+
+
+@pytest.mark.parametrize("filename,expected", [
+    ("ch01.pdf", "Chapter 1"),
+    ("ch10.pdf", "Chapter 10"),
+    ("Chapter-3-Biology-and-Diseases-of-Mice_.pdf", "Chapter 3: Biology and Diseases of Mice"),
+    ("Chapter-11 - Microbiological Quality Control.pdf", "Chapter 11: Microbiological Quality Control"),
+    ("intro.pdf", "Intro"),
+])
+def test_chapter_title_derivation(filename, expected):
+    from pathlib import Path
+    assert cli._chapter_title(Path(filename), None) == expected
+
+
+def test_chapter_count_mismatch_errors(two_pdfs, tmp_path, mocked_all):
+    a, b = two_pdfs
+    rc = cli.main([
+        str(a), str(b), "--book", "Book", "--chapter", "OnlyOne",
+        "--out", "pptx", "--output", str(tmp_path),
+    ])
+    assert rc == 2
+    mocked_all.pptx.assert_not_called()
+    mocked_all.cpptx.assert_not_called()
