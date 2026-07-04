@@ -1,17 +1,19 @@
-"""Smoke test: extraction on a known-good chapter.
+"""Smoke test: extraction on a real chapter PDF you supply.
 
-Requires `tests/fixtures/laboratory_rat_ch1.pdf` — not committed to the repo
-because of copyright, but the test verifies the structure of the manifest
-the extractor produces when run against it.
+Requires `tests/fixtures/sample_chapter.pdf` — not committed to the repo (never
+commit copyrighted material). When present, the test checks the structural
+invariants of the manifest the extractor produces; it skips otherwise, so CI and
+public checkouts pass without the PDF.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 
-FIXTURE = Path(__file__).parent / "fixtures" / "laboratory_rat_ch1.pdf"
+FIXTURE = Path(__file__).parent / "fixtures" / "sample_chapter.pdf"
 
 # Skip if the fixture isn't present (e.g. in CI without the PDF)
 pytestmark = pytest.mark.skipif(
@@ -19,20 +21,21 @@ pytestmark = pytest.mark.skipif(
     reason=f"fixture {FIXTURE.name} not present",
 )
 
+# A run of >= 3 consecutive all-caps words signals a running-header bleed.
+_HEADER_BLEED = re.compile(r"[A-Z][A-Z&.'-]+(?:\s+[A-Z][A-Z&.'-]+){2,}")
+
 
 @pytest.fixture(scope="module")
 def manifest_with_tables(tmp_path_factory):
     from figgydeck.extract import extract_chapter
-    out_dir = tmp_path_factory.mktemp("ch1")
+    out_dir = tmp_path_factory.mktemp("chapter")
     return extract_chapter(FIXTURE, out_dir, include_tables=True, verbose=False), out_dir
 
 
-def test_finds_all_figures_and_tables(manifest_with_tables):
+def test_finds_figures(manifest_with_tables):
     m, _ = manifest_with_tables
     figures = [e for e in m if e["type"] == "figure"]
-    tables = [e for e in m if e["type"] == "table"]
-    assert len(figures) == 53, f"expected 53 figures, got {len(figures)}"
-    assert len(tables) == 2, f"expected 2 tables, got {len(tables)}"
+    assert figures, "expected at least one figure in the manifest"
 
 
 def test_every_figure_has_an_image(manifest_with_tables):
@@ -47,6 +50,19 @@ def test_every_table_has_an_image(manifest_with_tables):
     assert not missing, f"tables without images: {missing}"
 
 
+def test_figure_images_are_distinct(manifest_with_tables):
+    """Each figure must map to its own image — no two figures share one file.
+
+    This is the invariant the geometric matcher exists to protect: naive
+    'Nth image is figure N' ordering collapses swap-prone pairs onto the wrong
+    (and sometimes duplicate) images.
+    """
+    m, _ = manifest_with_tables
+    imgs = [e["image_filename"] for e in m if e["type"] == "figure" and e["image_filename"]]
+    dupes = {x for x in imgs if imgs.count(x) > 1}
+    assert not dupes, f"multiple figures share an image: {sorted(dupes)}"
+
+
 def test_default_skips_tables(tmp_path):
     """Without include_tables, tables should be excluded from the manifest entirely."""
     from figgydeck.extract import extract_chapter
@@ -57,44 +73,14 @@ def test_default_skips_tables(tmp_path):
     assert any(e["type"] == "figure" for e in m)
 
 
-def test_critical_swap_cases(manifest_with_tables):
-    """The swap-prone figures whose stream order doesn't match figure order.
-
-    These are the exact cases that defeat naive 'pdfimages -png in order'
-    matching. The geometric matcher must get them right.
-    """
-    m, _ = manifest_with_tables
-    by_num = {e["number"]: e for e in m if e["type"] == "figure"}
-
-    # (figure number, expected image stream index)
-    cases = [
-        ("1.16", 16),  # apparatus drawings (NOT Watson)
-        ("1.17", 15),  # Watson portrait
-        ("1.20", 20),  # McCollum feeding device
-        ("1.21", 19),  # Osborne portrait
-        ("1.23", 23),  # Osborne&Mendel cage
-        ("1.24", 22),  # Sherman portrait
-        ("1.29", 29),  # Bussey building
-        ("1.30", 28),  # Castle's rat cage
-        ("1.46", 46),  # Trexler/Reyniers/Ervin photo
-        ("1.47", 45),  # flexible film isolators
-        ("1.50", 50),  # Kraft portrait
-        ("1.51", 49),  # Filter cap design
-    ]
-    for num, expected_idx in cases:
-        actual = by_num[num]["image_filename"]
-        expected = f"img-{expected_idx:03d}.png"
-        assert actual == expected, f"Fig {num}: expected {expected}, got {actual}"
-
-
 def test_captions_are_clean(manifest_with_tables):
-    """Captions should not contain running headers, page numbers, or footnote leaks."""
+    """Captions should not contain running-header or footnote leaks."""
     m, _ = manifest_with_tables
     for e in m:
         if e["type"] != "figure":
             continue
         cap = e["caption"]
-        assert "BACKGROUND OF" not in cap, f"Fig {e['number']} has running-header bleed"
+        assert not _HEADER_BLEED.search(cap), f"Fig {e['number']} has running-header bleed"
         # ligatures should be decoded
         assert "ﬁ" not in cap, f"Fig {e['number']} has unresolved ligature"
         assert "ﬂ" not in cap, f"Fig {e['number']} has unresolved ligature"
@@ -110,7 +96,7 @@ def test_table_titles_present(manifest_with_tables):
 def test_apkg_round_trip(manifest_with_tables, tmp_path):
     """Build an apkg from a figs-only manifest view and verify it's a valid Anki package.
 
-    Uses the figs-only view to exercise the new default behavior end-to-end:
+    Uses the figs-only view to exercise the default behavior end-to-end:
     manifest filtered to figures -> apkg with figures only.
     """
     import sqlite3
@@ -120,7 +106,7 @@ def test_apkg_round_trip(manifest_with_tables, tmp_path):
 
     m, out_dir = manifest_with_tables
     figs_only = [e for e in m if e["type"] == "figure"]
-    apkg_path = tmp_path / "ch1.apkg"
+    apkg_path = tmp_path / "chapter.apkg"
     build_apkg(
         figs_only, out_dir / "images",
         "Test Book", "Test Chapter",
@@ -141,5 +127,5 @@ def test_apkg_round_trip(manifest_with_tables, tmp_path):
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM notes")
         n_notes = c.fetchone()[0]
-        # 53 figures, no tables (figs-only view exercises the new default)
-        assert n_notes == 53, f"expected 53 notes, got {n_notes}"
+        # one note per figure
+        assert n_notes == len(figs_only), f"expected {len(figs_only)} notes, got {n_notes}"

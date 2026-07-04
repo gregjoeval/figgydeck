@@ -15,16 +15,16 @@ numbers a reader sees on the page.
 For example, on a page with two figures (1.16 in the left column, 1.17 in
 the right column), the typesetter may have inserted the right-column image
 first. `pdfimages` then writes:
-    - `img-015.png` ← actually shows Watson (Fig 1.17 visually)
-    - `img-016.png` ← actually shows the apparatus (Fig 1.16 visually)
+    - `img-015.png` ← actually shows Fig 1.17 (the right column)
+    - `img-016.png` ← actually shows Fig 1.16 (the left column)
 
-A naive "Nth image is figure N" mapping gets these backwards. In *The
-Laboratory Rat* chapter 1, this happens to 8 of the 53 figures.
+A naive "Nth image is figure N" mapping gets these backwards. In a typical
+chapter this can affect a meaningful fraction of the figures.
 
 ## The matching solution
 
 Figure labels (the visible "FIGURE 1.17" text) are reliably distinguishable
-from body text by **font size**: in the Elsevier laboratory-animal series,
+from body text by **font size**: in Elsevier-style layouts,
 labels are 9 pt, captions are 8 pt, and body text is 10 pt.
 
 `pdfplumber` exposes per-character font metadata, so we can:
@@ -50,9 +50,9 @@ text from char positions (with newlines on big y-jumps and spaces on x-gaps
 in the book.
 
 A small amount of cruft can leak in:
-- Running headers ("BACKGROUND OF THE LABORATORY RAT") that happen to land
+- Running headers (an all-caps chapter/book banner) that happen to land
   at 8 pt and overlap the column being captured.
-- Footnote text on pages where Donaldson's collaborator names appear at 8pt.
+- Footnote text that appears at the same ~8 pt size as captions.
 
 `figgydeck.clean.clean_caption` strips these by pattern-match.
 
@@ -99,8 +99,7 @@ manifest.json + images/
 
 ## Adapting to other publishers
 
-The font-size constants in `layout.py` are tuned to Elsevier's
-laboratory-animal series:
+The font-size constants in `layout.py` are tuned to Elsevier-style layouts:
 
 ```python
 LABEL_SIZE = 9.0      # "FIGURE X.Y" / "TABLE X.Y"

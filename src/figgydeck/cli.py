@@ -22,8 +22,8 @@ def _safe_filename(book: str, chapter: str) -> str:
     """Build a clean filename from book + chapter titles.
 
     Examples:
-        "The Laboratory Rat (3rd ed., 2020)", "Ch. 1: Historical Foundations"
-        → "LaboratoryRat3e_Ch01_HistoricalFoundations"
+        "Example Textbook (1st ed., 2020)", "Ch. 3: Cell Structure"
+        → "ExampleTextbook1StEd2020_Ch3CellStructure"
     """
     return f"{_slug(book)}_{_slug(chapter)}"
 
@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
                     "package them as Anki decks or PowerPoint slides.",
     )
     p.add_argument("pdfs", nargs="+", metavar="PDF", help="One or more source chapter PDFs")
-    p.add_argument("--book", required=True, help="Book title (e.g. 'The Laboratory Rat (3rd ed., 2020)')")
+    p.add_argument("--book", required=True, help="Book title (e.g. 'Example Textbook (1st ed., 2020)')")
     p.add_argument(
         "--chapter", action="append", default=None, metavar="TITLE",
         help="Chapter title (e.g. 'Ch. 1: Historical Foundations'). Repeatable: "

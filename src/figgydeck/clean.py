@@ -10,23 +10,22 @@ LIGATURES = {
     "ﬅ": "ft", "ﬆ": "st",
 }
 
-# Patterns matching things that look like 8pt text but aren't part of the caption
-RUNNING_HEADER_PATTERNS = [
-    re.compile(r"BACKGROUND OF THE LABORATORY RAT", re.I),
-    re.compile(r"^\d+\.\s+HISTORICAL FOUNDATIONS$", re.I),
-]
+# A running header/footer is a banner of consecutive ALL-CAPS words (the book or
+# chapter title) that PDF extraction interleaves into the caption text. We treat
+# any run of >= 3 consecutive capitalized tokens -- with short lowercase
+# connectors like "of"/"the" allowed between them -- as such a banner and strip
+# it. This is a heuristic: ordinary captions rarely contain three consecutive
+# all-caps words with no intervening punctuation (acronym lists like "DNA, RNA"
+# are punctuated, so they don't match and are preserved).
+_CAPS_WORD = r"[A-Z][A-Z0-9&.'\-]*"
+_CONNECTOR = r"(?:of|the|and|in|for|to|a|an|&)"
+RUNNING_HEADER_RE = re.compile(
+    rf"{_CAPS_WORD}(?:(?:\s+{_CONNECTOR})*\s+{_CAPS_WORD}){{2,}}"
+)
 
-FOOTNOTE_LINE_PATTERNS = [
-    re.compile(r"^\d?\s*Names of"),
-]
-
-# Footnote-style trailing sentences that bleed into long captions.
-# Anything from these markers to end-of-string is stripped.
-FOOTNOTE_TAIL_PATTERNS = [
-    re.compile(r"\s+Names of [A-Z][a-z]+['’]?s? collaborators.*$"),
-    re.compile(r"\s+BACKGROUND OF.*$"),
-    re.compile(r"\s+\d+\.\s*HISTORICAL FOUNDATIONS.*$", re.I),
-]
+# Per-line footnote patterns are publisher-specific; none are enabled by default.
+# Add re.compile(...) entries here to drop footnote lines for a particular layout.
+FOOTNOTE_LINE_PATTERNS: list[re.Pattern[str]] = []
 
 
 def clean_caption(text: str) -> str:
@@ -49,8 +48,7 @@ def clean_caption(text: str) -> str:
         text = text.replace(lig, repl)
 
     # 2. Running headers (mid-text occurrences)
-    for pat in RUNNING_HEADER_PATTERNS:
-        text = pat.sub("", text)
+    text = RUNNING_HEADER_RE.sub(" ", text)
 
     # 3. Per-line footnote filtering
     lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
@@ -66,12 +64,12 @@ def clean_caption(text: str) -> str:
     # 6. Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
 
-    # 7. Trailing-cruft strip
-    text = re.sub(r"\s*BACKGROUND.*$", "", text)
-    for pat in FOOTNOTE_TAIL_PATTERNS:
-        text = pat.sub("", text)
+    # 7. Second running-header pass: catches banners that only became adjacent
+    #    once line breaks were collapsed (header bled onto the caption tail).
+    text = RUNNING_HEADER_RE.sub(" ", text)
+    text = re.sub(r"\s+", " ", text).strip()
 
-    return text.strip()
+    return text
 
 
 def split_camel(s: str) -> str:

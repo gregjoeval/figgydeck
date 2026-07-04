@@ -36,17 +36,23 @@ brew install poppler
 sudo apt install poppler-utils
 ```
 
+PowerPoint output (`--out pptx`) needs an optional extra:
+
+```bash
+pip install "figgydeck[pptx]"
+```
+
 ## Usage
 
 ```bash
 # One command, chapter PDF → Anki deck (figures only by default)
 figgydeck chapter1.pdf \
-    --book "The Laboratory Rat (3rd ed., 2020)" \
-    --chapter "Ch. 1: Historical Foundations" \
+    --book "Example Textbook (1st ed., 2020)" \
+    --chapter "Ch. 3: Cell Structure" \
     --output ./out/
 
 # Outputs:
-#   out/LaboratoryRat_3e_Ch01_HistoricalFoundations.apkg  ← import into Anki
+#   out/ExampleTextbook1StEd2020_Ch3CellStructure.apkg     ← import into Anki
 #   out/manifest.json                                      ← inspect what was extracted
 #   out/images/                                            ← extracted figures
 ```
@@ -97,7 +103,7 @@ For an Elsevier-format chapter, `figgydeck`:
 
 1. Extracts all embedded images via `pdfimages`
 2. Walks each PDF page with `pdfplumber`, identifying:
-   - **`FIGURE X.Y` / `TABLE X.Y` labels** by font size (9 pt bold)
+   - **`FIGURE X.Y` / `TABLE X.Y` labels** by font size (~9 pt label font)
    - **caption text** by font size (8 pt) within column-aware bounding boxes
    - **table regions** by horizontal-rule detection
 3. Matches each label to the nearest image whose bottom edge sits just above it
@@ -107,8 +113,8 @@ For an Elsevier-format chapter, `figgydeck`:
    line wraps)
 6. Emits a `manifest.json` plus the Anki `.apkg`
 
-Validated on chapter 1 of *The Laboratory Rat* (3rd ed.): 53/53 figures matched
-correctly, 2/2 tables cropped with full titles.
+On a well-behaved Elsevier-format chapter this reliably matches every figure to
+its caption and crops tables with their full titles.
 
 ## Card design
 
@@ -122,7 +128,7 @@ and dark mode:
 
 ## Status
 
-Active development. Supports the Elsevier laboratory-animal textbook series.
+Active development. Tuned for Elsevier-style two-column academic layouts.
 Other publishers may need template adjustments to the font-size constants.
 
 ## License

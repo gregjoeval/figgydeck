@@ -18,7 +18,7 @@ from figgydeck import build_apkg, extract_chapter
 
 CHAPTERS_DIR = Path("./pdfs")  # one PDF per chapter
 OUTPUT_DIR = Path("./out")
-BOOK_TITLE = "The Laboratory Rat (3rd ed., 2020)"
+BOOK_TITLE = "Example Textbook (1st ed., 2020)"
 
 OUTPUT_DIR.mkdir(exist_ok=True)
 
