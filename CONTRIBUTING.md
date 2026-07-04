@@ -25,8 +25,8 @@ figgydeck/
 │   ├── layout.py          font/geometry-based label & caption detection
 │   ├── images.py          pdfimages wrapping + table cropping
 │   ├── clean.py           caption text post-processing
-│   ├── anki.py            .apkg builder
-│   ├── pptx.py            .pptx builder (optional dependency)
+│   ├── pptx.py            .pptx builder (PowerPoint slides)
+│   ├── anki.py            .apkg builder (Anki cards)
 │   └── cli.py             argparse entry point
 ├── tests/                 unit + smoke tests
 ├── examples/              illustrative scripts

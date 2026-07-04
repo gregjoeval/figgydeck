@@ -92,10 +92,14 @@ chapter.pdf
 
 manifest.json + images/
    │
-   ├─► genanki  ─► .apkg
+   ├─► python-pptx  ─► .pptx   (needs the [pptx] extra)
    │
-   └─► python-pptx  ─► .pptx (optional)
+   └─► genanki      ─► .apkg
 ```
+
+Both builders read the same `manifest.json` + `images/`, so the two formats
+always carry identical content — the choice is just where you want to study:
+slides or flashcards.
 
 ## Adapting to other publishers
 
@@ -120,5 +124,5 @@ differently, or use bold/italic instead of a font-size differential.
   could be inferred from same heuristics, but figgydeck doesn't do this
   yet. Sections are passed in via the `--chapter` CLI flag for now.
 - **Title generation.** Figures in this template don't have explicit titles,
-  just running prose captions. If you want titles for the Anki card front,
+  just running prose captions. If you want short titles on the slide or card,
   you'd need a separate enrichment step (an LLM does this well).

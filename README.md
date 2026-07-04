@@ -2,18 +2,24 @@
 
 [![tests](https://github.com/gregjoeval/figgydeck/actions/workflows/tests.yml/badge.svg)](https://github.com/gregjoeval/figgydeck/actions/workflows/tests.yml)
 
-> Turn textbooks into study decks. Extract figures, tables, and their captions from chapter PDFs, then package them as Anki decks (or PowerPoint).
+> Turn textbooks into study decks. Extract figures, tables, and their captions from chapter PDFs, then package them as PowerPoint slides or Anki flashcard decks.
 
-`figgydeck` reads a chapter PDF, finds every figure and table along with its
-caption, and emits an `.apkg` file ready to import into Anki. Each card has the
-figure or table on the front and the caption + book/chapter metadata on the back
-— the format you actually want for visual recall.
+`figgydeck` reads a chapter PDF and finds every figure and table along with its
+caption. It gives you one slide or card per figure — the image on the face, and
+the caption plus book/chapter/page metadata attached — the format you actually
+want for visual recall or lecture review.
 
-It can also emit a `.pptx` slide deck if you want a static archive view.
+Two output formats, same extraction:
+
+- **PowerPoint** (`.pptx`) — one slide per figure/table, image centered with its
+  aspect ratio preserved and the metadata in the slide's speaker notes. Opens in
+  PowerPoint, Keynote, or Google Slides.
+- **Anki** (`.apkg`) — one card per figure/table, image on the front and the
+  caption + metadata on the back. Imports straight into Anki.
 
 ## Why
 
-Manually building flashcards from a 40-figure chapter takes hours. The two
+Manually building slides or flashcards from a 40-figure chapter takes hours. The two
 hard parts are (1) matching extracted images to their figure numbers — PDF
 stream order is often shuffled — and (2) cleaning captions of running headers
 and footnotes that bleed in. `figgydeck` does both with pure-Python signal
@@ -45,13 +51,13 @@ pip install "figgydeck[pptx]"
 ## Usage
 
 ```bash
-# One command, chapter PDF → Anki deck (figures only by default)
+# One command, chapter PDF → figure deck (figures only by default)
 figgydeck chapter1.pdf \
     --book "Example Textbook (1st ed., 2020)" \
     --chapter "Ch. 3: Cell Structure" \
     --output ./out/
 
-# Outputs:
+# Outputs (default format is .apkg — see --out below for PowerPoint):
 #   out/ExampleTextbook1StEd2020_Ch3CellStructure.apkg     ← import into Anki
 #   out/manifest.json                                      ← inspect what was extracted
 #   out/images/                                            ← extracted figures
@@ -70,6 +76,9 @@ figgydeck chapter1.pdf --book "..." --chapter "..." --out pptx           # only 
 figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg,pptx      # both
 figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg --out pptx  # same
 ```
+
+`--out` defaults to `apkg` when omitted. PowerPoint output needs the optional
+`[pptx]` extra (see [Install](#install)).
 
 ### Multiple chapters
 
@@ -111,16 +120,26 @@ For an Elsevier-format chapter, `figgydeck`:
 4. Crops table regions from rasterized pages
 5. Cleans captions (strips running headers, decodes ligatures, de-hyphenates
    line wraps)
-6. Emits a `manifest.json` plus the Anki `.apkg`
+6. Emits a `manifest.json` plus your chosen deck(s) — `.apkg` and/or `.pptx`
 
 On a well-behaved Elsevier-format chapter this reliably matches every figure to
 its caption and crops tables with their full titles.
 
-## Card design
+## What you get
 
-The Anki card model uses a clean two-side layout that's readable in both light
-and dark mode:
+Both formats carry the same content — the figure or table image plus its
+caption and book/chapter/page metadata — laid out for the way you'll use it.
 
+**PowerPoint slides** (`.pptx`)
+
+- One slide per figure/table, image centered and scaled to fit with its aspect
+  ratio preserved (no cropping)
+- Number, title, caption, book, chapter, and page in the slide's speaker notes
+- A combined deck (`--combine`) opens with a title slide (book + chapter count)
+
+**Anki cards** (`.apkg`)
+
+- A clean two-side layout that's readable in both light and dark mode
 - **Front:** image only, with a small `Fig X.Y` tag below
 - **Back:** type label, caption, and book/chapter/page metadata
 - Stable note GUIDs based on `(book, chapter, type, number)` — re-importing
