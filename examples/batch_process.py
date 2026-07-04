@@ -4,6 +4,12 @@ Useful when you want to:
     - process a directory of chapters in one go
     - merge per-chapter manifests into one book-level deck
     - apply custom post-processing to captions before building the deck
+
+Note: the CLI now handles multiple chapters natively — pass several PDFs and add
+`--combine` to merge them into one artifact per format, e.g.
+    figgydeck ch01.pdf ch02.pdf --book "..." --combine --out apkg,pptx
+See figgydeck.build_combined_apkg / figgydeck.pptx.build_combined_pptx for the
+programmatic equivalent.
 """
 
 from pathlib import Path
