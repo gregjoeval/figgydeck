@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.chapter is None:
         titles = [_chapter_title(p, None) for p in pdf_paths]
     elif len(args.chapter) == len(pdf_paths):
-        titles = [_chapter_title(p, c) for p, c in zip(pdf_paths, args.chapter)]
+        titles = [_chapter_title(p, c) for p, c in zip(pdf_paths, args.chapter, strict=True)]
     else:
         print(
             f"error: got {len(args.chapter)} --chapter value(s) for "
@@ -147,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
 
     single_pdf = len(pdf_paths) == 1
     chapters: list[tuple[list[dict], Path, str]] = []
-    for i, (pdf, title) in enumerate(zip(pdf_paths, titles)):
+    for i, (pdf, title) in enumerate(zip(pdf_paths, titles, strict=True)):
         ex_dir = out_dir if single_pdf else out_dir / f"{i:02d}_{_slug(title)}"
         manifest = extract_chapter(pdf, ex_dir, include_tables=args.tables, verbose=verbose)
         chapters.append((manifest, ex_dir / "images", title))
