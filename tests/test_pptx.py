@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from figgydeck import Chapter
 from figgydeck.pptx import _fit_within, build_combined_pptx, build_pptx
 
 # Slide image box (inches), mirrored from pptx.py.
@@ -106,7 +107,7 @@ def test_build_combined_pptx_merges_all_chapters(tmp_path):
 
     out = tmp_path / "combined.pptx"
     build_combined_pptx(
-        [(m1, ch1_imgs, "Chapter 1"), (m2, ch2_imgs, "Chapter 2")],
+        [Chapter(m1, ch1_imgs, "Chapter 1"), Chapter(m2, ch2_imgs, "Chapter 2")],
         "Book", out, verbose=False,
     )
 

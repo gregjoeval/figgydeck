@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import html
-import json
 import re
 import shutil
 import tempfile
 from pathlib import Path
 
 import genanki
+
+from figgydeck.models import Chapter, load_manifest
 
 # Stable model ID — must not change between runs, or Anki will fail to
 # update existing notes when users re-import.
@@ -202,15 +204,17 @@ def _add_notes(
 
 
 def _deck_for(book_title: str, chapter_title: str, deck_name: str) -> genanki.Deck:
-    """Create a genanki.Deck with a stable-ish id derived from book+chapter.
+    """Create a genanki.Deck with a stable id derived from book + chapter.
 
-    NOTE: builtin hash() is not stable across processes (PYTHONHASHSEED), so the
-    deck id can vary between runs. Anki keys decks by name on import, so this is
-    cosmetic; kept as-is for backward compatibility with existing decks.
+    Uses a SHA-256 digest (not builtin ``hash()``, which is salted per process
+    via ``PYTHONHASHSEED``) so the same book/chapter yields the same deck id on
+    every run. Anki keys decks by name on import, so the id is mostly cosmetic —
+    but a stable value keeps re-imports and diffs reproducible.
     """
     book_tag = _slugify(book_title)
     chapter_tag = _slugify(chapter_title)
-    deck_id = _DECK_ID_BASE + abs(hash(f"{book_tag}::{chapter_tag}")) % 100000
+    digest = hashlib.sha256(f"{book_tag}::{chapter_tag}".encode()).digest()
+    deck_id = _DECK_ID_BASE + int.from_bytes(digest[:4], "big") % 100000
     return genanki.Deck(deck_id, deck_name)
 
 
@@ -237,8 +241,7 @@ def build_apkg(
     Returns:
         Path to the written .apkg file.
     """
-    if isinstance(manifest, (str, Path)):
-        manifest = json.loads(Path(manifest).read_text())
+    manifest = load_manifest(manifest)
 
     images_dir = Path(images_dir)
     output_path = Path(output_path)
@@ -265,7 +268,7 @@ def build_apkg(
 
 
 def build_combined_apkg(
-    chapters: list[tuple[list[dict], Path, str]],
+    chapters: list[Chapter],
     book_title: str,
     output_path: str | Path,
     *,
@@ -274,9 +277,8 @@ def build_combined_apkg(
     """Build one `.apkg` merging every chapter into its own Anki subdeck.
 
     Args:
-        chapters: list of (manifest, images_dir, chapter_title). Each manifest
-            may be the list from `extract_chapter()` or a path to a
-            `manifest.json`.
+        chapters: list of `Chapter` records. Each chapter's `manifest` may be
+            the list from `extract_chapter()` or a path to a `manifest.json`.
         book_title: Book title — the parent deck; each chapter becomes a
             subdeck named ``"{book_title}::{chapter_title}"`` ("::" with no
             spaces is Anki's subdeck separator, so they nest under the book).
@@ -299,9 +301,10 @@ def build_combined_apkg(
         total_notes = 0
         total_skipped = 0
 
-        for i, (manifest, images_dir, chapter_title) in enumerate(chapters):
-            if isinstance(manifest, (str, Path)):
-                manifest = json.loads(Path(manifest).read_text())
+        for i, chapter in enumerate(chapters):
+            manifest = load_manifest(chapter.manifest)
+            images_dir = chapter.images_dir
+            chapter_title = chapter.title
             deck = _deck_for(
                 book_title, chapter_title, f"{book_title}::{chapter_title}"
             )
