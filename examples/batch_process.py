@@ -2,8 +2,11 @@
 
 Useful when you want to:
     - process a directory of chapters in one go
-    - merge per-chapter manifests into one book-level deck
-    - apply custom post-processing to captions before building the deck
+    - merge per-chapter manifests into one book-level artifact
+    - apply custom post-processing to captions before building the output
+
+This example builds both output formats (PowerPoint slides and Anki cards) from
+the same extraction.
 
 Note: the CLI now handles multiple chapters natively — pass several PDFs and add
 `--combine` to merge them into one artifact per format, e.g.
@@ -15,6 +18,7 @@ programmatic equivalent.
 from pathlib import Path
 
 from figgydeck import build_apkg, extract_chapter
+from figgydeck.pptx import build_pptx  # needs the [pptx] extra
 
 CHAPTERS_DIR = Path("./pdfs")  # one PDF per chapter
 OUTPUT_DIR = Path("./out")
@@ -30,16 +34,18 @@ for pdf_path in sorted(CHAPTERS_DIR.glob("ch*.pdf")):
     extracted_dir = OUTPUT_DIR / chapter_num
     manifest = extract_chapter(pdf_path, extracted_dir, include_tables=True)
 
-    # 2. Build .apkg
+    images_dir = extracted_dir / "images"
+
+    # 2. Build PowerPoint slides
+    pptx_path = OUTPUT_DIR / f"{pdf_path.stem}.pptx"
+    build_pptx(manifest, images_dir, BOOK_TITLE, chapter_title, pptx_path)
+
+    # 3. Build Anki cards
     apkg_path = OUTPUT_DIR / f"{pdf_path.stem}.apkg"
-    build_apkg(
-        manifest,
-        extracted_dir / "images",
-        BOOK_TITLE,
-        chapter_title,
-        apkg_path,
-    )
+    build_apkg(manifest, images_dir, BOOK_TITLE, chapter_title, apkg_path)
 
-    print(f"  ✓ {pdf_path.name} → {apkg_path.name}")
+    print(f"  ✓ {pdf_path.name} → {pptx_path.name}, {apkg_path.name}")
 
-print("\nDone. Import the .apkg files into Anki via File → Import.")
+print("\nDone.")
+print("  • Open the .pptx files in PowerPoint, Keynote, or Google Slides.")
+print("  • Import the .apkg files into Anki via File → Import.")
