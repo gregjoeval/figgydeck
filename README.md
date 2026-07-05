@@ -138,3 +138,8 @@ caption and book/chapter/page metadata — laid out for the way you'll use it.
 - **Back:** type label, caption, and book/chapter/page metadata
 - Stable note GUIDs based on `(book, chapter, type, number)` — re-importing
   updates existing cards rather than duplicating them
+
+## AI assistance
+
+Built with help from [Claude Code](https://claude.com/claude-code). All code is
+human-reviewed.
