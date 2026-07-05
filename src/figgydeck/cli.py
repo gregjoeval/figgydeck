@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
+
+from figgydeck.models import Chapter
 
 
 def _slug(s: str) -> str:
@@ -55,10 +59,10 @@ _VALID_FORMATS = ("apkg", "pptx")
 
 
 def _format_list(s: str) -> list[str]:
-    """Parse a single --out value: comma-separated formats with validation."""
+    """Parse a single --format value: comma-separated formats with validation."""
     parts = [p.strip().lower() for p in s.split(",") if p.strip()]
     if not parts:
-        raise argparse.ArgumentTypeError("--out value cannot be empty")
+        raise argparse.ArgumentTypeError("--format value cannot be empty")
     bad = [p for p in parts if p not in _VALID_FORMATS]
     if bad:
         raise argparse.ArgumentTypeError(
@@ -85,10 +89,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--output", "-o", default="./out", help="Output directory (default: ./out)")
     p.add_argument(
-        "--out", action="append", type=_format_list, default=None,
+        "--format", "-f", action="append", type=_format_list, default=None,
         metavar="FMT[,FMT...]",
-        help="Output format(s). Repeatable, or comma-separated. "
-             f"Choices: {', '.join(_VALID_FORMATS)}. Default: apkg.",
+        help="Output format(s) to build (required). Repeatable, or "
+             f"comma-separated. Choices: {', '.join(_VALID_FORMATS)}.",
     )
     p.add_argument("--combine", action="store_true",
                    help="Merge all input PDFs into a single artifact per format.")
@@ -97,8 +101,24 @@ def main(argv: list[str] | None = None) -> int:
                         "JPEGs, which keep the file small enough for Google Slides).")
     p.add_argument("--tables", action="store_true",
                    help="Also extract tables (default: figures only).")
+    p.add_argument("--save-manifest", action="store_true",
+                   help="Also write manifest.json (the structured extraction "
+                        "result) into the output directory.")
+    p.add_argument("--save-images", action="store_true",
+                   help="Also write the extracted figure/table images (an "
+                        "images/ folder) into the output directory.")
     p.add_argument("--quiet", "-q", action="store_true", help="Suppress progress logging")
     args = p.parse_args(argv)
+
+    # An explicit output format is required — the decks are the only
+    # deliverables, so we won't guess which one you want.
+    if not args.format:
+        print(
+            f"error: --format is required (choose from: {', '.join(_VALID_FORMATS)}); "
+            "e.g. --format apkg  or  --format apkg,pptx",
+            file=sys.stderr,
+        )
+        return 2
 
     pdf_paths = [Path(p) for p in args.pdfs]
     missing = [p for p in pdf_paths if not p.exists()]
@@ -125,8 +145,7 @@ def main(argv: list[str] | None = None) -> int:
     verbose = not args.quiet
 
     # Flatten + dedupe requested formats while preserving order.
-    chunks = args.out if args.out else [["apkg"]]
-    formats = list(dict.fromkeys(f for chunk in chunks for f in chunk))
+    formats = list(dict.fromkeys(f for chunk in args.format for f in chunk))
 
     # Bind builders up front so a missing optional dep (python-pptx) fails
     # before the slow extraction step. Imported at call time so tests can
@@ -140,37 +159,51 @@ def main(argv: list[str] | None = None) -> int:
         from figgydeck.pptx import build_combined_pptx as pptx_combined
         from figgydeck.pptx import build_pptx as pptx_single
 
-    # Step 1: extract each PDF. A single PDF extracts into out_dir directly
-    # (preserving the classic out/images + out/manifest.json layout); multiple
-    # PDFs each get their own subdir so fixed image names don't collide.
     from figgydeck.extract import extract_chapter
 
     single_pdf = len(pdf_paths) == 1
-    chapters: list[tuple[list[dict], Path, str]] = []
-    for i, (pdf, title) in enumerate(zip(pdf_paths, titles, strict=True)):
-        ex_dir = out_dir if single_pdf else out_dir / f"{i:02d}_{_slug(title)}"
-        manifest = extract_chapter(pdf, ex_dir, include_tables=args.tables, verbose=verbose)
-        chapters.append((manifest, ex_dir / "images", title))
 
-    # Step 2: write requested formats
-    optimize = not args.full_res
-    if args.combine:
-        base = f"{_slug(args.book)}_Combined"
-        if apkg_combined is not None:
-            apkg_combined(chapters, args.book, out_dir / f"{base}.apkg", verbose=verbose)
-        if pptx_combined is not None:
-            pptx_combined(chapters, args.book, out_dir / f"{base}.pptx",
-                          optimize_images=optimize, verbose=verbose)
-    else:
-        for manifest, images_dir, title in chapters:
-            base = _safe_filename(args.book, title)
-            if apkg_single is not None:
-                apkg_single(manifest, images_dir, args.book, title,
-                            out_dir / f"{base}.apkg", verbose=verbose)
-            if pptx_single is not None:
-                pptx_single(manifest, images_dir, args.book, title,
-                            out_dir / f"{base}.pptx",
-                            optimize_images=optimize, verbose=verbose)
+    # Extract into a temporary working dir. The built decks embed their own
+    # images, so the raw manifest.json / images/ are intermediates — surfaced
+    # into out_dir only when --save-manifest / --save-images ask for them. A
+    # single PDF extracts flat; multiple PDFs each get their own subdir so fixed
+    # image names (img-000.png, ...) don't collide.
+    with tempfile.TemporaryDirectory(prefix="figgydeck-extract-") as tmp:
+        work = Path(tmp)
+        chapters: list[Chapter] = []
+        for i, (pdf, title) in enumerate(zip(pdf_paths, titles, strict=True)):
+            sub = "" if single_pdf else f"{i:02d}_{_slug(title)}"
+            ex_dir = work / sub if sub else work
+            manifest = extract_chapter(pdf, ex_dir, include_tables=args.tables, verbose=verbose)
+            chapters.append(Chapter(manifest, ex_dir / "images", title))
+
+            if args.save_manifest or args.save_images:
+                dest = out_dir / sub if sub else out_dir
+                dest.mkdir(parents=True, exist_ok=True)
+                if args.save_manifest:
+                    shutil.copy(ex_dir / "manifest.json", dest / "manifest.json")
+                if args.save_images:
+                    shutil.copytree(ex_dir / "images", dest / "images", dirs_exist_ok=True)
+
+        # Write requested formats (inside the temp dir so extracted images exist).
+        optimize = not args.full_res
+        if args.combine:
+            base = f"{_slug(args.book)}_Combined"
+            if apkg_combined is not None:
+                apkg_combined(chapters, args.book, out_dir / f"{base}.apkg", verbose=verbose)
+            if pptx_combined is not None:
+                pptx_combined(chapters, args.book, out_dir / f"{base}.pptx",
+                              optimize_images=optimize, verbose=verbose)
+        else:
+            for chapter in chapters:
+                base = _safe_filename(args.book, chapter.title)
+                if apkg_single is not None:
+                    apkg_single(chapter.manifest, chapter.images_dir, args.book, chapter.title,
+                                out_dir / f"{base}.apkg", verbose=verbose)
+                if pptx_single is not None:
+                    pptx_single(chapter.manifest, chapter.images_dir, args.book, chapter.title,
+                                out_dir / f"{base}.pptx",
+                                optimize_images=optimize, verbose=verbose)
 
     return 0
 

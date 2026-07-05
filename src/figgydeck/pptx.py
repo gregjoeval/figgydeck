@@ -7,8 +7,9 @@ prototypes is preserved in `examples/build_pptx_styled.py` for reference.
 from __future__ import annotations
 
 import io
-import json
 from pathlib import Path
+
+from figgydeck.models import Chapter, load_manifest
 
 # Image placement box on each slide (inches): left, top, width, height.
 # The box is centered horizontally on the 13.333" wide, 7.5" tall 16:9 slide.
@@ -256,8 +257,7 @@ def build_pptx(
             "build_pptx requires python-pptx. Install with: pip install figgydeck[pptx]"
         ) from e
 
-    if isinstance(manifest, (str, Path)):
-        manifest = json.loads(Path(manifest).read_text())
+    manifest = load_manifest(manifest)
 
     images_dir = Path(images_dir)
     output_path = Path(output_path)
@@ -278,7 +278,7 @@ def build_pptx(
 
 
 def build_combined_pptx(
-    chapters: list[tuple[list[dict], Path, str]],
+    chapters: list[Chapter],
     book_title: str,
     output_path: str | Path,
     *,
@@ -288,9 +288,8 @@ def build_combined_pptx(
     """Build one deck merging every chapter's figures/tables.
 
     Args:
-        chapters: list of (manifest, images_dir, chapter_title). Each manifest
-            may be the list from `extract_chapter()` or a path to a
-            `manifest.json`.
+        chapters: list of `Chapter` records. Each chapter's `manifest` may be
+            the list from `extract_chapter()` or a path to a `manifest.json`.
         book_title: Book title shown on the single title slide and in each
             slide's speaker notes.
         output_path: Where to write the combined `.pptx`.
@@ -317,11 +316,10 @@ def build_combined_pptx(
 
     total_added = 0
     total_skipped = 0
-    for manifest, images_dir, chapter_title in chapters:
-        if isinstance(manifest, (str, Path)):
-            manifest = json.loads(Path(manifest).read_text())
+    for chapter in chapters:
+        manifest = load_manifest(chapter.manifest)
         added, skipped = _add_figure_slides(
-            pres, blank_layout, manifest, Path(images_dir), book_title, chapter_title,
+            pres, blank_layout, manifest, Path(chapter.images_dir), book_title, chapter.title,
             optimize=optimize_images,
         )
         total_added += added

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from figgydeck import Chapter
 from figgydeck.anki import build_combined_apkg
 
 
@@ -39,7 +40,7 @@ def test_combined_apkg_namespaces_colliding_media(tmp_path):
 
     out = tmp_path / "combined.apkg"
     build_combined_apkg(
-        [(m1, ch1_imgs, "Chapter 1"), (m2, ch2_imgs, "Chapter 2")],
+        [Chapter(m1, ch1_imgs, "Chapter 1"), Chapter(m2, ch2_imgs, "Chapter 2")],
         "Book", out, verbose=False,
     )
 
@@ -69,3 +70,13 @@ def test_combined_apkg_namespaces_colliding_media(tmp_path):
             assert any("Book::Chapter 2" == n for n in deck_names)
     finally:
         conn.close()
+
+
+def test_deck_id_is_deterministic():
+    """deck_id must be stable across runs (regression guard: an earlier impl used
+    builtin hash(), which is salted per process via PYTHONHASHSEED)."""
+    from figgydeck.anki import _deck_for
+    # Depends only on book + chapter, not the deck's display name.
+    a = _deck_for("Book", "Chapter 1", "Book::Chapter 1")
+    b = _deck_for("Book", "Chapter 1", "a different display name")
+    assert a.deck_id == b.deck_id == 2059439393

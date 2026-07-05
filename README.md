@@ -42,7 +42,7 @@ brew install poppler
 sudo apt install poppler-utils
 ```
 
-PowerPoint output (`--out pptx`) needs an optional extra:
+PowerPoint output (`--format pptx`) needs an optional extra:
 
 ```bash
 pip install "figgydeck[pptx]"
@@ -55,12 +55,11 @@ pip install "figgydeck[pptx]"
 figgydeck chapter1.pdf \
     --book "Example Textbook (1st ed., 2020)" \
     --chapter "Ch. 3: Cell Structure" \
+    --format apkg \
     --output ./out/
 
-# Outputs (default format is .apkg — see --out below for PowerPoint):
+# Output — just the deck (the extracted images are embedded inside it):
 #   out/ExampleTextbook1StEd2020_Ch3CellStructure.apkg     ← import into Anki
-#   out/manifest.json                                      ← inspect what was extracted
-#   out/images/                                            ← extracted figures
 ```
 
 Also include table cards (extra `pdftoppm` rasterization per table):
@@ -69,16 +68,32 @@ Also include table cards (extra `pdftoppm` rasterization per table):
 figgydeck chapter1.pdf --book "..." --chapter "..." --tables
 ```
 
-Pick your output format(s) with `--out` (repeatable, or comma-separated):
+Choose your output format(s) with `--format`/`-f` (required; repeatable or
+comma-separated):
 
 ```bash
-figgydeck chapter1.pdf --book "..." --chapter "..." --out pptx           # only .pptx
-figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg,pptx      # both
-figgydeck chapter1.pdf --book "..." --chapter "..." --out apkg --out pptx  # same
+figgydeck chapter1.pdf --book "..." --chapter "..." --format apkg          # only .apkg
+figgydeck chapter1.pdf --book "..." --chapter "..." --format pptx          # only .pptx
+figgydeck chapter1.pdf --book "..." --chapter "..." --format apkg,pptx     # both
 ```
 
-`--out` defaults to `apkg` when omitted. PowerPoint output needs the optional
-`[pptx]` extra (see [Install](#install)).
+`--format` is required — there is no default. PowerPoint output needs the
+optional `[pptx]` extra (see [Install](#install)).
+
+### Keeping the extraction artifacts
+
+By default the output directory holds only the decks; the extracted images are
+embedded inside them. To also keep the raw intermediates, pass `--save-images`
+(writes an `images/` folder) and/or `--save-manifest` (writes `manifest.json`,
+the structured list of everything that was extracted):
+
+```bash
+figgydeck chapter1.pdf --book "..." --chapter "..." --format apkg \
+    --save-manifest --save-images
+#   out/...apkg          ← the deck
+#   out/manifest.json    ← inspect what was extracted
+#   out/images/          ← extracted figures
+```
 
 ### Multiple chapters
 
@@ -88,17 +103,18 @@ Pass more than one chapter PDF in a single command. Give one `--chapter` per PDF
 
 ```bash
 # one artifact per chapter (like running figgydeck once per PDF)
-figgydeck ch01.pdf ch02.pdf ch03.pdf --book "..." --out pptx
+figgydeck ch01.pdf ch02.pdf ch03.pdf --book "..." --format pptx
 
 # --combine merges every chapter into ONE artifact per format
-figgydeck ch01.pdf ch02.pdf ch03.pdf --book "..." --combine --out apkg,pptx
+figgydeck ch01.pdf ch02.pdf ch03.pdf --book "..." --combine --format apkg,pptx
 #   out/<Book>_Combined.pptx   ← one deck: title slide + all figures
 #   out/<Book>_Combined.apkg   ← one Anki package, one subdeck per chapter
 ```
 
-With multiple PDFs, each chapter is extracted into its own `out/NN_<slug>/`
-subdir (so identical image names don't collide). Slide images keep their native
-aspect ratio and are centered — nothing is stretched or cropped.
+With multiple PDFs, when you keep artifacts (`--save-manifest`/`--save-images`)
+each chapter's files go in their own `out/NN_<slug>/` subdir (so identical image
+names don't collide). Slide images keep their native aspect ratio and are
+centered — nothing is stretched or cropped.
 
 ## How it works
 
@@ -114,7 +130,9 @@ For an Elsevier-format chapter, `figgydeck`:
 4. Crops table regions from rasterized pages
 5. Cleans captions (strips running headers, decodes ligatures, de-hyphenates
    line wraps)
-6. Emits a `manifest.json` plus your chosen deck(s) — `.apkg` and/or `.pptx`
+6. Builds your chosen deck(s) — `.apkg` and/or `.pptx` (optionally emitting the
+   intermediate `manifest.json` / `images/` with `--save-manifest` /
+   `--save-images`)
 
 On a well-behaved Elsevier-format chapter this reliably matches every figure to
 its caption and crops tables with their full titles.

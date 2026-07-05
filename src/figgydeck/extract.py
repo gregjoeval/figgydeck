@@ -19,6 +19,7 @@ from figgydeck.images import (
     stream_index_to_filename,
 )
 from figgydeck.layout import extract_page
+from figgydeck.models import MANIFEST_VERSION
 
 
 @dataclass
@@ -118,7 +119,10 @@ def extract_chapter(
     log("[3/3] Writing manifest...")
     manifest_dicts = [asdict(e) for e in manifest]
     out_path = output_dir / "manifest.json"
-    out_path.write_text(json.dumps(manifest_dicts, indent=2, ensure_ascii=False))
+    out_path.write_text(json.dumps(
+        {"version": MANIFEST_VERSION, "entries": manifest_dicts},
+        indent=2, ensure_ascii=False,
+    ))
 
     n_fig = sum(1 for e in manifest if e.type == "figure")
     n_tab = sum(1 for e in manifest if e.type == "table")

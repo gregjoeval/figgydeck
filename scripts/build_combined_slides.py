@@ -96,7 +96,7 @@ def build(src: Path, book: str, style: str, recursive: bool, out_root: Path, dry
     argv: list[str] = [str(pdf) for pdf, _ in chapters]
     for _, title in chapters:
         argv += ["--chapter", title]
-    argv += ["--book", book, "--combine", "--out", "pptx", "--output", str(out_dir)]
+    argv += ["--book", book, "--combine", "--format", "pptx", "--output", str(out_dir)]
     return cli_main(argv)
 
 
