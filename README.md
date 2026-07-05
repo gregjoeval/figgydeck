@@ -100,12 +100,6 @@ With multiple PDFs, each chapter is extracted into its own `out/NN_<slug>/`
 subdir (so identical image names don't collide). Slide images keep their native
 aspect ratio and are centered — nothing is stretched or cropped.
 
-### Breaking changes in 0.2.0
-
-- `--pptx` and `--no-anki` removed — use `--out apkg`, `--out pptx`, or `--out apkg,pptx`.
-- Table cards are now opt-in via `--tables` (previously included by default).
-- The library function `extract_chapter()` defaults `include_tables=False`. Programmatic callers that want tables must pass `include_tables=True`.
-
 ## How it works
 
 For an Elsevier-format chapter, `figgydeck`:
