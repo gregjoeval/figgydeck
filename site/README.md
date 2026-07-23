@@ -21,8 +21,11 @@ python -m http.server -d site 8000
 
 Deploys are automated by `.github/workflows/deploy-site.yml`:
 
-- push to `main` touching `site/**` → **production** deploy (`figgydeck.pages.dev`)
+- push to `main` touching `site/**` → **production** deploy
 - any pull request touching `site/**` → **preview** deploy on a per-PR URL
+
+Production is served at **https://figgydeck.gregjoeval.com** (with
+`figgydeck.pages.dev` as the underlying Pages URL).
 
 ### One-time Cloudflare setup
 
@@ -48,5 +51,15 @@ These steps happen once, outside the repo (a free Cloudflare account is enough):
    gh secret set CLOUDFLARE_ACCOUNT_ID
    ```
 
-After that, every push/PR deploys automatically. Any static host works too
-(GitHub Pages, Netlify, Vercel) — just serve this `site/` directory.
+After that, every push/PR deploys automatically.
+
+### Attach the custom domain (one-time)
+
+Once the project has a production deployment, in the Cloudflare dashboard go to
+**Workers & Pages → figgydeck → Custom domains → Set up a custom domain** and
+enter `figgydeck.gregjoeval.com`. Because the `gregjoeval.com` zone is in the
+same Cloudflare account, the CNAME is created and validated automatically — no
+manual DNS edit needed.
+
+Any static host works too (GitHub Pages, Netlify, Vercel) — just serve this
+`site/` directory.
