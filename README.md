@@ -1,6 +1,7 @@
 # figgydeck
 
 [![tests](https://github.com/gregjoeval/figgydeck/actions/workflows/tests.yml/badge.svg)](https://github.com/gregjoeval/figgydeck/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/figgydeck.svg)](https://pypi.org/project/figgydeck/)
 
 > Turn textbooks into study decks. Extract figures, tables, and their captions from chapter PDFs, then package them as PowerPoint slides or Anki flashcard decks.
 
