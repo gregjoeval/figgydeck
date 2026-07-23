@@ -37,6 +37,7 @@ examples/*.pdf
 .vscode/
 .idea/
 .serena/
+.wrangler/
 .DS_Store
 *.swp
 *.swo

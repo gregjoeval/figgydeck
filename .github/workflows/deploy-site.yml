@@ -1,0 +1,51 @@
+name: deploy-site
+
+# Deploy the static landing page in site/ to Cloudflare Pages.
+#   - Push to main (touching site/**)  → production deploy (figgydeck.pages.dev).
+#   - Pull request (touching site/**)   → preview deploy on a per-PR URL, posted
+#                                          back as a comment on the PR.
+#   - Manual "Run workflow"             → production deploy.
+#
+# One-time setup (see site/README.md):
+#   1. Create a Cloudflare Pages project named `figgydeck` (production branch main).
+#   2. Add repo secrets CLOUDFLARE_API_TOKEN (Pages:Edit) and CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy-site.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch: {}
+
+# Serialize deploys; let an in-progress run finish rather than cancelling it.
+concurrency:
+  group: deploy-site-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write # so the preview URL can be commented on the PR
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # --branch drives prod vs preview: `main` deploys to production, any
+          # other branch (i.e. a PR head) yields a preview deployment + URL.
+          command: >-
+            pages deploy site
+            --project-name=figgydeck
+            --branch=${{ github.head_ref || github.ref_name }}
