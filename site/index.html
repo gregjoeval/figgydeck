@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>figgydeck — every figure, on its own card</title>
+<meta name="description" content="figgydeck reads a chapter PDF and pulls out every figure and table — the image on the face of a card, caption and book/chapter/page attached. Export to Anki or PowerPoint.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 26'%3E%3Cpath d='M12 6.2c-1.2 0-1.9.7-2.1 1.8C6.4 8.9 4.3 12 4.3 15.4c0 4.5 3.4 8 7.7 8s7.7-3.5 7.7-8c0-3.4-2.1-6.5-5.6-7.4-.2-1.1-.9-1.8-2.1-1.8Z' fill='%238f3f82'/%3E%3Cpath d='M12 6.6C12 4 13.2 1.7 16.6 1 16.3 4.2 14.8 6.2 12 6.6Z' fill='%237a8a5e'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="figgydeck — every figure, on its own card">
+<meta property="og:description" content="Turn textbook chapters into study decks. Extract every figure and table with its caption, then export to Anki or PowerPoint.">
+<meta property="og:url" content="https://github.com/gregjoeval/figgydeck">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="./styles.css">
+<style>
+html { scroll-behavior: smooth; overflow-x: clip; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; text-wrap: pretty; overflow-x: clip; }
+a { color: var(--color-accent); text-underline-offset: 3px; }
+a:hover { color: var(--color-accent-700); }
+.btn-primary:hover { background: var(--color-accent-800) !important; color: var(--color-bg) !important; }
+@keyframes fd-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+/* figgy-pudding plum: re-tune the accent ramp to a warm fig purple on the
+   same lightness scale as the system's terracotta, so contrast holds. The
+   sage second accent and cream ground stay. */
+:root {
+  --color-accent: #8f3f82;
+  --color-accent-100: #f9ecf6;
+  --color-accent-200: #f0d6ec;
+  --color-accent-300: #ddb0d8;
+  --color-accent-400: #c483bd;
+  --color-accent-500: #ab60a0;
+  --color-accent-600: #7d3872;
+  --color-accent-700: #632f5b;
+  --color-accent-800: #4f2949;
+  --color-accent-900: #341a30;
+}
+</style>
+</head>
+<body>
+
+<nav class="nav" style="max-width:1160px;margin:0 auto;padding-top:clamp(14px,2vw,22px);padding-bottom:clamp(14px,2vw,22px);padding-left:clamp(20px,5vw,48px);padding-right:clamp(20px,5vw,48px);gap:clamp(12px,3vw,32px);font-size:clamp(15px,1.2vw,17px);">
+  <span class="nav-brand" style="display:inline-flex;align-items:center;gap:11px;font-size:clamp(20px,1.7vw,24px);">
+    <svg width="29" height="31" viewBox="0 0 24 26" fill="none" aria-hidden="true" style="display:block;flex:none;">
+      <path d="M12 6.2c-1.2 0-1.9.7-2.1 1.8C6.4 8.9 4.3 12 4.3 15.4c0 4.5 3.4 8 7.7 8s7.7-3.5 7.7-8c0-3.4-2.1-6.5-5.6-7.4-.2-1.1-.9-1.8-2.1-1.8Z" fill="var(--color-accent)"></path>
+      <circle cx="9.4" cy="14.6" r="1.05" fill="var(--color-accent-200)"></circle>
+      <circle cx="13.7" cy="13.4" r="1.05" fill="var(--color-accent-200)"></circle>
+      <circle cx="11.8" cy="17.4" r="1.05" fill="var(--color-accent-200)"></circle>
+      <path d="M12 6.6C12 4 13.2 1.7 16.6 1 16.3 4.2 14.8 6.2 12 6.6Z" fill="var(--color-accent-2)"></path>
+      <path d="M12 6.4C11 4.7 11.4 3 12 2.2" stroke="var(--color-accent-2-800)" stroke-width="0.9" stroke-linecap="round"></path>
+      <path d="M12 6.2c.1-1 .5-1.7 1.1-2.3" stroke="var(--color-accent-2-700)" stroke-width="0.85" stroke-linecap="round"></path>
+    </svg>
+    figgydeck
+  </span>
+  <a href="#how">How it works</a>
+  <a href="#run">Run it yourself</a>
+  <a href="#support">Support</a>
+  <a class="btn btn-secondary" href="https://github.com/gregjoeval/figgydeck" target="_blank" rel="noopener" style="gap:8px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 1 5 1 5 1c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 8c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+    GitHub
+  </a>
+</nav>
+
+<main style="max-width:1160px;margin:0 auto;padding:0 clamp(20px,5vw,48px);">
+
+  <section class="hero" style="position:relative;display:flex;flex-wrap:wrap;gap:clamp(32px,5vw,72px);align-items:center;padding:clamp(40px,7vw,96px) 0 clamp(32px,5vw,72px);">
+    <div aria-hidden="true" style="position:absolute;right:-160px;top:-200px;width:440px;height:440px;border-radius:50%;background:var(--color-accent-2-200);z-index:-1;pointer-events:none;max-width:60vw;"></div>
+    <div style="flex:1 1 400px;min-width:min(100%,400px);">
+      <h1 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(40px,5.6vw,72px);line-height:1.06;letter-spacing:-0.02em;margin:0 0 clamp(20px,3vw,28px);">Every figure,<br>on its own card.</h1>
+      <p style="font-size:clamp(16px,1.4vw,18px);line-height:1.65;max-width:52ch;margin:0 0 clamp(24px,3vw,32px);color:color-mix(in srgb,var(--color-text) 90%,transparent);">figgydeck reads a chapter PDF and pulls out every figure and table: the image on the face of a card, with its caption and the book, chapter and page kept attached. Export the deck to Anki or PowerPoint, whichever your review flow already lives in.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;">
+        <a class="btn btn-primary" href="#run" style="padding:12px 22px;">Run it yourself</a>
+        <a class="btn btn-ghost" href="#how" style="padding:12px 16px;gap:6px;">See how it works
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+        </a>
+      </div>
+    </div>
+
+    <div style="flex:1 1 380px;min-width:min(100%,320px);position:relative;height:clamp(360px,42vw,460px);animation:fd-float 7s ease-in-out infinite;">
+      <div style="position:absolute;left:8%;top:14%;width:min(70%,300px);transform:rotate(-7deg);background:var(--color-surface);border-radius:24px;box-shadow:var(--shadow-md);padding:16px;">
+        <div style="border-radius:16px;background:var(--color-accent-2-100);aspect-ratio:4/3;display:grid;place-items:center;overflow:hidden;position:relative;">
+          <svg width="72%" viewBox="0 0 120 80" fill="none">
+            <rect x="10" y="14" width="100" height="52" rx="4" fill="#fdfaf4" stroke="var(--color-accent-2-400)" stroke-width="1.5"></rect>
+            <rect x="10" y="14" width="100" height="13" rx="4" fill="var(--color-accent-2-400)"></rect>
+            <rect x="10" y="20" width="100" height="7" fill="var(--color-accent-2-400)"></rect>
+            <line x1="43" y1="14" x2="43" y2="66" stroke="var(--color-accent-2-300)" stroke-width="1.2"></line>
+            <line x1="76" y1="14" x2="76" y2="66" stroke="var(--color-accent-2-300)" stroke-width="1.2"></line>
+            <line x1="10" y1="40" x2="110" y2="40" stroke="var(--color-accent-2-300)" stroke-width="1.2"></line>
+            <line x1="10" y1="53" x2="110" y2="53" stroke="var(--color-accent-2-300)" stroke-width="1.2"></line>
+            <rect x="15" y="18" width="20" height="5" rx="2.5" fill="var(--color-accent-2-100)"></rect>
+            <rect x="49" y="18" width="18" height="5" rx="2.5" fill="var(--color-accent-2-100)"></rect>
+            <rect x="82" y="18" width="18" height="5" rx="2.5" fill="var(--color-accent-2-100)"></rect>
+            <rect x="15" y="31" width="20" height="4" rx="2" fill="var(--color-accent-2-500)"></rect>
+            <rect x="49" y="31" width="16" height="4" rx="2" fill="var(--color-accent-2-400)"></rect>
+            <rect x="82" y="31" width="18" height="4" rx="2" fill="var(--color-accent-2-400)"></rect>
+            <rect x="15" y="44" width="18" height="4" rx="2" fill="var(--color-accent-2-500)"></rect>
+            <rect x="49" y="44" width="19" height="4" rx="2" fill="var(--color-accent-2-400)"></rect>
+            <rect x="82" y="44" width="15" height="4" rx="2" fill="var(--color-accent-2-400)"></rect>
+            <rect x="15" y="57" width="19" height="4" rx="2" fill="var(--color-accent-2-500)"></rect>
+            <rect x="49" y="57" width="14" height="4" rx="2" fill="var(--color-accent-2-400)"></rect>
+            <rect x="82" y="57" width="17" height="4" rx="2" fill="var(--color-accent-2-400)"></rect>
+          </svg>
+          <span style="position:absolute;top:8px;left:10px;font-family:var(--font-body);font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-accent-2-800);">Table 3.1</span>
+        </div>
+        <p style="font-size:12.5px;line-height:1.4;margin:12px 0 10px;color:color-mix(in srgb,var(--color-text) 85%,transparent);">Second-breakfast calories by hobbit household.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span class="tag tag-accent-2">Ch. 3</span>
+          <span class="tag tag-neutral">p. 74</span>
+        </div>
+      </div>
+      <div style="position:absolute;right:4%;bottom:6%;width:min(72%,308px);transform:rotate(5deg);background:var(--color-surface);border-radius:24px;box-shadow:var(--shadow-lg);padding:16px;">
+        <div style="border-radius:16px;background:var(--color-accent-100);aspect-ratio:4/3;display:grid;place-items:center;overflow:hidden;position:relative;">
+          <svg width="66%" viewBox="0 0 120 80" fill="none" stroke="var(--color-accent-700)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v60h96" stroke="var(--color-accent-400)" stroke-width="2"></path><rect x="24" y="42" width="14" height="26" rx="2" fill="var(--color-accent-300)" stroke="none"></rect><rect x="46" y="30" width="14" height="38" rx="2" fill="var(--color-accent-400)" stroke="none"></rect><rect x="68" y="20" width="14" height="48" rx="2" fill="var(--color-accent-500)" stroke="none"></rect><rect x="90" y="36" width="14" height="32" rx="2" fill="var(--color-accent-300)" stroke="none"></rect></svg>
+          <span style="position:absolute;top:8px;left:10px;font-family:var(--font-body);font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-accent-800);">Figure 3.2</span>
+        </div>
+        <p style="font-size:12.5px;line-height:1.4;margin:12px 0 10px;color:color-mix(in srgb,var(--color-text) 85%,transparent);">Airflow over an unladen swallow at cruising speed.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span class="tag tag-accent">Ch. 3</span>
+          <span class="tag tag-neutral">p. 118</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" style="padding:clamp(56px,8vw,104px) 0 clamp(48px,7vw,88px);">
+    <span style="display:block;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;color:var(--color-accent-700);margin-bottom:14px;">How it works</span>
+    <h2 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(30px,3.4vw,42px);line-height:1.1;letter-spacing:-0.015em;margin:0 0 18px;max-width:22ch;">From PDF to flash cards in three steps.</h2>
+    <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;max-width:52ch;margin:0 0 clamp(32px,4vw,48px);color:color-mix(in srgb,var(--color-text) 88%,transparent);">A textbook chapter can hide forty figures across fifty pages. figgydeck walks the whole PDF so you can flip through the pictures instead of the prose.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(20px,3vw,32px);">
+      <div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--color-accent-100);display:grid;place-items:center;color:var(--color-accent-700);margin-bottom:18px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+        </div>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:22px;line-height:1.2;margin:0 0 10px;">Point it at a PDF</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:34ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">Give figgydeck a chapter or a whole book as a PDF. No page limits, no fuss.</p>
+      </div>
+      <div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--color-accent-2-100);display:grid;place-items:center;color:var(--color-accent-2-800);margin-bottom:18px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><circle cx="12" cy="12" r="3"></circle><path d="m16 16-1.9-1.9"></path></svg>
+        </div>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:22px;line-height:1.2;margin:0 0 10px;">It finds the figures</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:34ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">It scans every page for figures and tables and grabs the caption that belongs to each one, verbatim and in place.</p>
+      </div>
+      <div>
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--color-accent-100);display:grid;place-items:center;color:var(--color-accent-700);margin-bottom:18px;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 22H4a2 2 0 0 1-2-2V6"></path><path d="m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18"></path><circle cx="12" cy="8" r="2"></circle><rect width="16" height="16" x="6" y="2" rx="2"></rect></svg>
+        </div>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:22px;line-height:1.2;margin:0 0 10px;">Export it as a deck</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:34ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">Out comes one card per figure, packaged as an Anki deck or a PowerPoint file, caption and book/chapter/page metadata attached.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" style="padding:clamp(48px,7vw,88px) 0;">
+    <span style="display:block;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;color:var(--color-accent-700);margin-bottom:14px;">Why it helps</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(28px,3.5vw,44px) clamp(32px,5vw,72px);">
+      <div style="position:relative;padding-left:34px;">
+        <span aria-hidden="true" style="position:absolute;left:0;top:7px;width:18px;height:18px;border-radius:50%;background:var(--color-accent);"></span>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:21px;line-height:1.25;margin:0 0 8px;">Figures and tables, both</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:44ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">Diagrams, plots, micrographs, data tables. If it carries a caption, it becomes a card.</p>
+      </div>
+      <div style="position:relative;padding-left:34px;">
+        <span aria-hidden="true" style="position:absolute;left:0;top:7px;width:18px;height:18px;border-radius:50%;background:var(--color-accent-2);"></span>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:21px;line-height:1.25;margin:0 0 8px;">Captions stay attached</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:44ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">Every card keeps the original caption word for word, so no figure loses the meaning it came with.</p>
+      </div>
+      <div style="position:relative;padding-left:34px;">
+        <span aria-hidden="true" style="position:absolute;left:0;top:7px;width:18px;height:18px;border-radius:50%;background:var(--color-accent);"></span>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:21px;line-height:1.25;margin:0 0 8px;">Knows where it came from</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:44ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">Book, chapter and page travel with each figure, ready to cite or to find the passage again.</p>
+      </div>
+      <div style="position:relative;padding-left:34px;">
+        <span aria-hidden="true" style="position:absolute;left:0;top:7px;width:18px;height:18px;border-radius:50%;background:var(--color-accent-2);"></span>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:21px;line-height:1.25;margin:0 0 8px;">Built for recall</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:44ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">One figure per card is the shape flashcards and lecture-review already love, so drop them straight into your study flow.</p>
+      </div>
+      <div style="position:relative;padding-left:34px;">
+        <span aria-hidden="true" style="position:absolute;left:0;top:7px;width:18px;height:18px;border-radius:50%;background:var(--color-accent);"></span>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:21px;line-height:1.25;margin:0 0 8px;">One command, whole chapters</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:44ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">It's a small Python package. Point it at a chapter or a whole book and let it work through every page.</p>
+      </div>
+      <div style="position:relative;padding-left:34px;">
+        <span aria-hidden="true" style="position:absolute;left:0;top:7px;width:18px;height:18px;border-radius:50%;background:var(--color-accent-2);"></span>
+        <h3 style="font-family:var(--font-heading);font-weight:400;font-size:21px;line-height:1.25;margin:0 0 8px;">Free and open source</h3>
+        <p style="font-size:15px;line-height:1.6;margin:0;max-width:44ch;color:color-mix(in srgb,var(--color-text) 88%,transparent);">The whole thing lives on GitHub. Read it, fork it, or send a patch. figgydeck stays free to run.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="run" style="display:flex;flex-wrap:wrap;gap:clamp(32px,5vw,64px);align-items:center;padding:clamp(48px,7vw,88px) 0;">
+    <div style="flex:1 1 340px;min-width:min(100%,320px);">
+      <span style="display:block;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;color:var(--color-accent-700);margin-bottom:14px;">Run it yourself</span>
+      <h2 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(30px,3.4vw,42px);line-height:1.1;letter-spacing:-0.015em;margin:0 0 20px;">A few lines and a PDF.</h2>
+      <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;max-width:46ch;margin:0 0 24px;color:color-mix(in srgb,var(--color-text) 88%,transparent);">If you're comfortable with a terminal, you can run figgydeck today. Set up Python, install the package, and point it at your PDFs. Pick your format and the deck lands in a folder next to them.</p>
+      <a class="btn btn-secondary" href="https://github.com/gregjoeval/figgydeck" target="_blank" rel="noopener" style="gap:8px;padding:11px 20px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 1 5 1 5 1c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 8c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path><path d="M9 18c-4.51 2-5-2-7-2"></path></svg>
+        Read the full guide on GitHub
+      </a>
+    </div>
+    <div style="flex:1 1 380px;min-width:min(100%,300px);background:var(--color-neutral-900);border-radius:24px;padding:clamp(20px,3vw,28px);box-shadow:var(--shadow-lg);">
+      <div style="display:flex;gap:7px;margin-bottom:18px;">
+        <span style="width:11px;height:11px;border-radius:50%;background:var(--color-accent-400);"></span>
+        <span style="width:11px;height:11px;border-radius:50%;background:var(--color-accent-2-400);"></span>
+        <span style="width:11px;height:11px;border-radius:50%;background:var(--color-neutral-500);"></span>
+      </div>
+      <pre style="margin:0;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:clamp(12.5px,1.1vw,14px);line-height:2;color:var(--color-neutral-200);white-space:pre-wrap;word-break:break-word;"><span style="color: var(--color-neutral-500);"># install (needs poppler on your system)<span style="color: var(--color-accent-2-300);">
+pip install</span></span> figgydeck
+
+<span style="color: var(--color-neutral-500);"># chapter PDF -&gt; figure deck
+</span><span style="color: var(--color-accent-300);">figgydeck</span> chapter3.pdf \
+  <span style="color: var(--color-accent-2-300);">--book</span> "Example Textbook" \
+  <span style="color: var(--color-accent-2-300);">--chapter</span> "Ch. 3: Cell Structure" \
+  <span style="color: var(--color-accent-2-300);">--format</span> apkg,pptx</pre>
+    </div>
+  </section>
+
+  <section id="support" style="padding:clamp(24px,4vw,48px) 0 clamp(48px,6vw,72px);">
+    <div style="background:var(--color-accent-2-100);border-radius:clamp(28px,4vw,44px);padding:clamp(32px,5vw,56px) clamp(24px,4vw,56px);position:relative;overflow:hidden;">
+      <div aria-hidden="true" style="position:absolute;right:-70px;bottom:-90px;width:280px;height:280px;border-radius:50%;background:var(--color-accent-2-200);pointer-events:none;"></div>
+      <div style="position:relative;max-width:60ch;">
+        <span style="display:block;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;color:var(--color-accent-2-800);margin-bottom:14px;">Support figgydeck</span>
+        <h2 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(28px,3.2vw,40px);line-height:1.12;letter-spacing:-0.015em;margin:0 0 18px;">Free to run, and I'd like to keep it that way.</h2>
+        <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;margin:0 0 12px;color:color-mix(in srgb,var(--color-text) 90%,transparent);">One day I'd love to host figgydeck so you can drop in a PDF without installing anything. Until then it's free to run yourself, and completely open source.</p>
+        <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;margin:0 0 28px;color:color-mix(in srgb,var(--color-text) 90%,transparent);">If it saved you an afternoon, buying me a coffee helps cover what that hosted version will cost to run. A GitHub star helps just as much.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;">
+          <a class="btn btn-primary" href="https://github.com/gregjoeval/figgydeck" target="_blank" rel="noopener" style="gap:8px;padding:12px 22px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 2.9 6.3 6.9.6-5.2 4.5 1.5 6.7L12 16.9 5.9 20.6l1.5-6.7L2.2 8.9l6.9-.6z"></path></svg>
+            Star on GitHub
+          </a>
+          <a class="btn btn-secondary" href="https://paypal.me/gregjoeval" target="_blank" rel="noopener" style="gap:8px;padding:12px 22px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>
+            Buy me a coffee
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer style="display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between;padding:clamp(28px,4vw,44px) 0;border-top:1px solid var(--color-divider);font-size:13px;color:color-mix(in srgb,var(--color-text) 72%,transparent);">
+    <span style="display:inline-flex;align-items:center;gap:9px;font-family:var(--font-heading);font-size:16px;color:var(--color-text);">
+      <svg width="18" height="20" viewBox="0 0 24 26" fill="none" aria-hidden="true" style="display:block;flex:none;">
+        <path d="M12 6.2c-1.2 0-1.9.7-2.1 1.8C6.4 8.9 4.3 12 4.3 15.4c0 4.5 3.4 8 7.7 8s7.7-3.5 7.7-8c0-3.4-2.1-6.5-5.6-7.4-.2-1.1-.9-1.8-2.1-1.8Z" fill="var(--color-accent)"></path>
+        <circle cx="9.4" cy="14.6" r="1.05" fill="var(--color-accent-200)"></circle>
+        <circle cx="13.7" cy="13.4" r="1.05" fill="var(--color-accent-200)"></circle>
+        <circle cx="11.8" cy="17.4" r="1.05" fill="var(--color-accent-200)"></circle>
+        <path d="M12 6.6C12 4 13.2 1.7 16.6 1 16.3 4.2 14.8 6.2 12 6.6Z" fill="var(--color-accent-2)"></path>
+        <path d="M12 6.4C11 4.7 11.4 3 12 2.2" stroke="var(--color-accent-2-800)" stroke-width="0.9" stroke-linecap="round"></path>
+        <path d="M12 6.2c.1-1 .5-1.7 1.1-2.3" stroke="var(--color-accent-2-700)" stroke-width="0.85" stroke-linecap="round"></path>
+      </svg>
+      figgydeck
+    </span>
+    <span style="display:inline-flex;flex-wrap:wrap;gap:8px 20px;align-items:center;">
+      <span>Open source · MIT</span>
+      <a href="https://github.com/gregjoeval/figgydeck" target="_blank" rel="noopener">github.com/gregjoeval/figgydeck</a>
+    </span>
+  </footer>
+
+</main>
+</body>
+</html>
