@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>figgydeck — every figure, on its own card</title>
+<title>figgydeck · turn textbooks into flashcards</title>
 <meta name="description" content="figgydeck reads a chapter PDF and pulls out every figure and table — the image on the face of a card, caption and book/chapter/page attached. Export to Anki or PowerPoint.">
 <link rel="canonical" href="https://figgydeck.gregjoeval.com/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 26'%3E%3Cpath d='M12 6.2c-1.2 0-1.9.7-2.1 1.8C6.4 8.9 4.3 12 4.3 15.4c0 4.5 3.4 8 7.7 8s7.7-3.5 7.7-8c0-3.4-2.1-6.5-5.6-7.4-.2-1.1-.9-1.8-2.1-1.8Z' fill='%238f3f82'/%3E%3Ccircle cx='9.4' cy='14.6' r='1.05' fill='%23f0d6ec'/%3E%3Ccircle cx='13.7' cy='13.4' r='1.05' fill='%23f0d6ec'/%3E%3Ccircle cx='11.8' cy='17.4' r='1.05' fill='%23f0d6ec'/%3E%3Cpath d='M12 6.6C12 4 13.2 1.7 16.6 1 16.3 4.2 14.8 6.2 12 6.6Z' fill='%237a8a5e'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
-<meta property="og:title" content="figgydeck — every figure, on its own card">
+<meta property="og:title" content="figgydeck — turn textbooks into flashcards">
 <meta property="og:description" content="Turn textbook chapters into study decks. Extract every figure and table with its caption, then export to Anki or PowerPoint.">
 <meta property="og:url" content="https://figgydeck.gregjoeval.com/">
 <meta name="twitter:card" content="summary">
@@ -125,8 +125,8 @@ a:hover { color: var(--color-accent-700); }
 
   <section id="how" style="padding:clamp(56px,8vw,104px) 0 clamp(48px,7vw,88px);">
     <span style="display:block;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;color:var(--color-accent-700);margin-bottom:14px;">How it works</span>
-    <h2 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(30px,3.4vw,42px);line-height:1.1;letter-spacing:-0.015em;margin:0 0 18px;max-width:22ch;">From PDF to flash cards in three steps.</h2>
-    <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;max-width:52ch;margin:0 0 clamp(32px,4vw,48px);color:color-mix(in srgb,var(--color-text) 88%,transparent);">A textbook chapter can hide forty figures across fifty pages. figgydeck walks the whole PDF so you can flip through the pictures instead of the prose.</p>
+    <h2 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(30px,3.4vw,42px);line-height:1.1;letter-spacing:-0.015em;margin:0 0 18px;max-width:22ch;">Turn textbooks into flashcards, in three steps.</h2>
+    <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;max-width:52ch;margin:0 0 clamp(32px,4vw,48px);color:color-mix(in srgb,var(--color-text) 88%,transparent);">A textbook can easily have 200 figures across 2,000 pages. figgydeck scans the whole PDF so you can flip through the flashcards instead.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(20px,3vw,32px);">
       <div>
         <div style="width:56px;height:56px;border-radius:50%;background:var(--color-accent-100);display:grid;place-items:center;color:var(--color-accent-700);margin-bottom:18px;">
@@ -222,7 +222,7 @@ pip install</span></span> figgydeck
         <span style="display:block;font-size:13px;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;color:var(--color-accent-2-800);margin-bottom:14px;">Support figgydeck</span>
         <h2 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(28px,3.2vw,40px);line-height:1.12;letter-spacing:-0.015em;margin:0 0 18px;">Free to run, and I'd like to keep it that way.</h2>
         <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;margin:0 0 12px;color:color-mix(in srgb,var(--color-text) 90%,transparent);">One day I'd love to host figgydeck so you can drop in a PDF without installing anything. Until then it's free to run yourself, and completely open source.</p>
-        <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;margin:0 0 28px;color:color-mix(in srgb,var(--color-text) 90%,transparent);">If it saved you an afternoon, buying me a coffee helps cover what that hosted version will cost to run. A GitHub star helps just as much.</p>
+        <p style="font-size:clamp(15.5px,1.2vw,17px);line-height:1.68;margin:0 0 28px;color:color-mix(in srgb,var(--color-text) 90%,transparent);">If it saved you an afternoon, consider buying me a coffee or giving the repository a star on GitHub.</p>
         <div style="display:flex;flex-wrap:wrap;gap:12px;">
           <a class="btn btn-primary" href="https://github.com/gregjoeval/figgydeck" target="_blank" rel="noopener" style="gap:8px;padding:12px 22px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 2.9 6.3 6.9.6-5.2 4.5 1.5 6.7L12 16.9 5.9 20.6l1.5-6.7L2.2 8.9l6.9-.6z"></path></svg>
